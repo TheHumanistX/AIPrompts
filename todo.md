@@ -691,6 +691,5 @@ In the 'theme' folder we have:
     ```
 
 
-Please review everything I have typed here a few times.  Ask me any questions about anything that is not clear. Don't just assume you can figure out what I meant if I wasnt clear, please ask me.  After that, let me know if you are ready to move forward from where we stopped (at the progress bar).
-
+Please review everything I have typed here a few times.  Ask me any questions about anything that is not clear. Don't just assume you can figure out what I meant if I wasnt clear, please ask me.  After that, let me know if you are ready to move forward.
 
