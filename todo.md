@@ -109,26 +109,22 @@ We have a components folder which holds the following:
     import React from 'react'
     import IconButton from '@mui/material/IconButton';
     import AddCircleIcon from '@mui/icons-material/AddCircle';
-    import { useTheme } from '@mui/material/styles';
 
-    const AddButton = ({ onClick, size = 'large', style }) => {
-    const theme = useTheme();
+    const AddButton = ({ onClick }) => {
 
       return (
         <IconButton
           onClick={onClick}
         >
           <AddCircleIcon 
-          onClick={onClick}
-          sx={{ color: 'buttonColor.main', ...style }}
-          fontSize={size}
+          sx={{ color: 'buttonColor.main' }}
+          fontSize='large'
           />
         </IconButton>
       );
     };
 
     export default AddButton;
-
     ```
 * HeaderBar.js
     * The code for HeaderBar.js:  
@@ -166,12 +162,13 @@ export default HeaderBar;
     export { default as Lists } from './Lists';
     export { default as Tasks } from './Tasks';
     export { default as TaskDetails } from './TaskDetails';
+    export { default as VerticalDots } from './VerticalDots';
     ```
 * Lists.js
     * The code for Lists.js:  
     ```javascript
     import React from 'react';
-    import { Box, Typography, IconButton, Card, CardContent } from '@mui/material';
+    import { Box, Typography, Card, CardContent } from '@mui/material';
     import { AddButton, TaskList } from './';
 
     const Lists = () => {
@@ -214,9 +211,9 @@ export default HeaderBar;
                    return <TaskList key={taskList.id} taskList={taskList} />
                 })}
 
-                <Card variant="plain" onClick={handleAddList} sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
+                <Card variant="plain" sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
                     <CardContent>
-                        <AddButton />
+                        <AddButton onClick={handleAddList}/>
                     </CardContent>
                 </Card>
             </Box>
@@ -224,7 +221,6 @@ export default HeaderBar;
     };
 
     export default Lists;
-
     ```
 * ProgressBar.js
     * The code for ProgressBar.js:  
@@ -285,9 +281,8 @@ export default HeaderBar;
     * The code for Task.js:  
     ```javascript
     import React, { useState } from 'react';
-    import { Box, Typography, IconButton, Menu, MenuItem } from '@mui/material';
-    import MoreVertIcon from '@mui/icons-material/MoreVert';
-    import { SmallMenu } from './';
+    import { Box, Typography, IconButton } from '@mui/material';
+    import { SmallMenu, VerticalDots } from './';
 
     const Task = ({ task }) => {
         const [anchorEl, setAnchorEl] = useState(null);
@@ -325,33 +320,25 @@ export default HeaderBar;
                     border='2px solid'
                     borderColor='cardBackgroundColor.alternate'
                 >
-                    <Typography 
-                    variant="h6"
-                    sx={{
-                        textDecoration: completed ? "line-through" : "none",
-                        color: completed ? "textColor.completed" : "textColor.primary",
-                    }}
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            textDecoration: completed ? "line-through" : "none",
+                            color: completed ? "textColor.completed" : "textColor.primary",
+                        }}
                     >{title}
                     </Typography>
-                    <IconButton onClick={handleClick}>
-                        <MoreVertIcon />
-                    </IconButton>
+
+                    <VerticalDots id={id} onClick={handleClick} />
+
                 </Box>
                 <SmallMenu anchorEl={anchorEl} handleClose={handleClose} />
-                <Menu
-                    anchorEl={anchorEl}
-                    open={Boolean(anchorEl)}
-                    onClose={handleClose}
-                >
-                    <MenuItem onClick={handleClose}>Edit</MenuItem>
-                    <MenuItem onClick={handleClose}>Delete</MenuItem>
-                </Menu>
+
             </div>
         );
     }
 
     export default Task;
-
     ```
 * TaskDetails.js
     * The code for TaskDetails.js: 
@@ -513,8 +500,7 @@ export default HeaderBar;
     ```javascript
     import React from 'react';
     import { Box, Typography, IconButton } from '@mui/material';
-    import MoreVertIcon from '@mui/icons-material/MoreVert';
-    import { ProgressBar, SmallMenu } from './';
+    import { ProgressBar, SmallMenu, VerticalDots } from './';
 
     const TaskList = ({ taskList }) => {
         const [anchorEl, setAnchorEl] = React.useState(null);
@@ -523,14 +509,14 @@ export default HeaderBar;
         const progress = (tasksCompleted / totalTasks) * 100;
 
         // Create a function that will set the background color of the Box dependent on wheter the 'id' is even or odd
-            const backgroundColor = () => {
-                if (id % 2 === 0) {
-                    console.log('Even', id % 2)
-                    return 'cardBackgroundColor.main';
-                } else {
-                    return 'cardBackgroundColor.alternate';
-                }
-            };
+        const backgroundColor = () => {
+            if (id % 2 === 0) {
+                console.log('Even', id % 2)
+                return 'cardBackgroundColor.main';
+            } else {
+                return 'cardBackgroundColor.alternate';
+            }
+        };
 
         const handleClick = (event) => {
             setAnchorEl(event.currentTarget);
@@ -546,20 +532,27 @@ export default HeaderBar;
                     border='2px solid'
                     padding='10px'
                     borderColor='cardBackgroundColor.alternate'
-                    backgroundColor= {backgroundColor()}
+                    backgroundColor={backgroundColor()}
                     height='115px'
                     width='380px'
                     borderRadius='12px'
+                    display='flex'
+                    alignItems='center'
+
                 >
-                    <Box display="flex" justifyContent="space-between" height='60%'>
-                        <Typography variant="h6">{title}</Typography>
-                        <IconButton onClick={handleClick}>
-                            <MoreVertIcon style={{ position: "absolute", top: "60%" }} />
-                        </IconButton>
-                    </Box>
+                    <Box
+                        display='flex'
+                    flexDirection='column'
+                    flexGrow={1}
+                    >
+                    <Typography variant="h6">{title}</Typography>
                     <Typography variant="body2">{`${tasksCompleted} of ${totalTasks} Tasks Complete`}</Typography>
                     <ProgressBar margin='10px 0 0 0' width='80%' progress={progress} />
                 </Box>
+                <VerticalDots id={id} onClick={handleClick} 
+                sx={{ ml: 'auto' }} />
+
+            </Box>
                 <SmallMenu anchorEl={anchorEl} handleClose={handleClose} />
             </div>
 
@@ -573,7 +566,7 @@ export default HeaderBar;
     * The code for Tasks.js:  
     ```javascript
     import React from 'react';
-    import { Box, Typography, IconButton, Card, CardContent } from '@mui/material';
+    import { Box, Typography, Card, CardContent } from '@mui/material';
     import { Task, AddButton } from './';
 
     const Tasks = ({ taskList }) => {
@@ -598,9 +591,9 @@ export default HeaderBar;
                 height="1060px"
                 bgcolor="cardBackgroundColor.main"
                 p={2}
-                // ml={2}
                 display="flex"
                 flexDirection="column"
+                alignItems="center"
                 borderRadius='22px'
             >
                 <Typography variant="h5" mb={2}>
@@ -613,9 +606,9 @@ export default HeaderBar;
                     <Task key={task.id} task={task} />
                 ))}
 
-                <Card variant="plain" onClick={handleAddTask} sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
+                <Card variant="plain" sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
                     <CardContent>
-                        <AddButton />
+                        <AddButton onClick={handleAddTask} />
                     </CardContent>
                 </Card>
             </Box>
@@ -623,7 +616,6 @@ export default HeaderBar;
     };
 
     export default Tasks;
-
     ```
 * TestComponent.js (for testing components as we make them).
     * The code for TestComponent.js:  
@@ -656,6 +648,36 @@ export default HeaderBar;
     }
 
     export default TestComponent
+
+    ```
+* VerticalDots.js 
+    * The code for VerticalDots.js:
+    ```javascript
+    import React from 'react'
+    import MoreVertIcon from '@mui/icons-material/MoreVert';
+    import { IconButton } from '@mui/material';
+
+    const VerticalDots = ({ id, onClick }) => {
+        const vertDotsColor = () => {
+            if (id % 2 === 0) {
+                console.log('Even', id % 2)
+                return 'cardBackgroundColor.alternate';
+            } else {
+                return 'cardBackgroundColor.main';
+            }
+        };
+        return (
+            <div>
+                <IconButton onClick={onClick}>
+                <MoreVertIcon
+                    sx={{ color: vertDotsColor(), width: 35, height: 35 }}
+                />
+                </IconButton>
+            </div>
+        )
+    }
+
+    export default VerticalDots
 
     ```
 In the 'theme' folder we have:
