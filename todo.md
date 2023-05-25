@@ -101,6 +101,79 @@ We decided to layout the project with the following components (at least):
 We have created the react app already as well as the App.js. 
 
 
+* The App.js:
+
+```javascript
+import React, { useState } from 'react';
+import { ThemeProvider } from '@mui/material/styles';
+import { ThirdwebProvider } from "@thirdweb-dev/react";
+import theme from './theme/theme';
+import { Grid, Box, Stack } from '@mui/material';
+import { Lists, Tasks, HeaderBar, WalletConnect, TaskDetails } from './components';
+import todoListData from './data/todoListData';
+
+function App() {
+  // Check if task list data exists in local storage
+  const taskListsJSON = localStorage.getItem('taskLists');
+  // If there's no data in Local Storage, store the initial data
+  if (taskListsJSON === null) {
+    // Store the initial task lists in Local Storage
+    localStorage.setItem('taskLists', JSON.stringify(todoListData));
+  }
+
+  // Parse the data from local storage or use the initial task lists
+  const initialData = taskListsJSON !== null ? JSON.parse(taskListsJSON) : todoListData;
+
+  // Set up state with the initial data
+  const [taskLists, setTaskLists] = useState(initialData);
+  const [selectedTaskList, setSelectedTaskList] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+
+  const handleTaskListClick = (taskList) => {
+    setSelectedTaskList(taskList);
+  };
+
+  const handleTaskClick = (task) => {
+    setSelectedTask(task);
+  };
+  
+  console.log('selectedTaskList: ', selectedTaskList)
+
+  console.log('taskListsJSON: ', taskListsJSON);
+  console.log('todoListData: ', todoListData);
+  console.log('taskLists');
+
+  return (
+    <ThirdwebProvider>
+    <ThemeProvider theme={theme}>
+      <Box bgcolor="backgroundColor.default" style={{ padding: "23px 34px", height: "97vh" }}>
+        <Grid container  gap='3vw' justifyContent='center' style={{ height: "90%" }}> 
+          <Grid item container xs={3}>
+            <Lists taskLists={taskLists} onTaskListClick={handleTaskListClick} />
+          </Grid>
+          <Grid item container xs={8}>
+            <Stack width='100%' spacing={2}>
+            <Box display='flex' gap='3vw'>
+            <HeaderBar taskList={selectedTaskList} />
+            <WalletConnect />
+            </Box>
+            <Box display='flex' height='100%'>
+            <Tasks taskList={selectedTaskList} onTaskClick={handleTaskClick} />
+            <TaskDetails task={selectedTask} />
+            </Box>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Box>
+    </ThemeProvider>
+    </ThirdwebProvider>
+  );
+}
+
+export default App;
+
+```
+
 We have a components folder which holds the following:
 
 * AddButton.js
@@ -133,21 +206,26 @@ We have a components folder which holds the following:
     import { Typography, Box } from '@mui/material';
     import { format, getMonth } from 'date-fns';
 
-    const HeaderBar = ({ currentTaskListTitle, tasksCompleted, totalTasks }) => {
+    const HeaderBar = ({ taskList }) => {
         const currentMonth = getMonth(new Date());
         // We don't want a period after May because it won't abbreviate may since it is already 3 letters long.
         const currentDate = currentMonth === 4 ? format(new Date(), 'MMM do, yyyy') : format(new Date(), 'MMM. do, yyyy');
-
+        const { listId, listName, tasks } = taskList || {};
+        const tasksCompleted = taskList ? tasks.filter((task) => task.completed).length : null;
+        const totalTasks = taskList ? tasks.length : null;
         return (
-            <Box display="flex" justifyContent="space-between" alignItems="center" p={2} width='680px' height='50px' padding="0px 30px" borderRadius='25px'     bgcolor='cardBackgroundColor.main' margin='20px 0'>
-                <Typography variant="h6">{`List: ${currentTaskListTitle}`}</Typography>
-                <Typography variant="h6">{`Tasks Completed: ${tasksCompleted} of ${totalTasks}`}</Typography>
+
+            <Box display="flex" justifyContent="space-between" alignItems="center" p={2} width='100%' height='50px' padding="0px 30px" borderRadius='25px'      bgcolor='cardBackgroundColor.main' >
+
+                <Typography variant="h6">{`List: ${ taskList ? listName : null}`}</Typography>
+                <Typography variant="h6">{`Tasks Completed: ${taskList ? tasksCompleted : null} of ${taskList ? totalTasks : null}`}</Typography>
                 <Typography variant="h6">{`Date: ${currentDate}`}</Typography>
+
             </Box>
         );
     };
 
-export default HeaderBar;
+    export default HeaderBar;
     ```
 * index.js (for exporting all the components)
     * The code for index.js:  
@@ -163,6 +241,7 @@ export default HeaderBar;
     export { default as Tasks } from './Tasks';
     export { default as TaskDetails } from './TaskDetails';
     export { default as VerticalDots } from './VerticalDots';
+    export { default as WalletConnect } from './WalletConnect';
     ```
 * Lists.js
     * The code for Lists.js:  
@@ -171,31 +250,20 @@ export default HeaderBar;
     import { Box, Typography, Card, CardContent } from '@mui/material';
     import { AddButton, TaskList } from './';
 
-    const Lists = () => {
-        const taskLists = [
-            { id: 1, title: 'Errands', tasksCompleted: 3, totalTasks: 8, completed: false },
-            { id: 2, title: 'Yardwork', tasksCompleted: 1, totalTasks: 5, completed: true },
-            { id: 3, title: 'Home Chores', tasksCompleted: 5, totalTasks: 10, completed: false },
-        ];
+    const Lists = ({ taskLists, onTaskListClick }) => {
 
-        console.log(taskLists);
-        console.log(taskLists.length);
-        console.log(taskLists[0]);
-        console.log(taskLists[1]);
-        console.log(taskLists[2]);
-        console.log(taskLists[0].id);
 
         const taskListsLength = taskLists.length;
 
         const handleAddList = () => {
             // Handle adding a new task list
-            console.log('Add a new task list');
+
         };
 
         return (
             <Box
-                width="410px"
-                height="1155px"
+                width="100%"
+                height="100%"
                 bgcolor="cardBackgroundColor.main"
                 p={2}
                 display="flex"
@@ -207,8 +275,8 @@ export default HeaderBar;
                 </Typography>
 
                 {taskLists.map((taskList) => {
-                console.log('After Map taskList: ', taskList)
-                   return <TaskList key={taskList.id} taskList={taskList} />
+                    console.log('taskList.listId: ', taskList.listId)
+                   return <TaskList key={taskList.listId} taskList={taskList} onTaskListClick={onTaskListClick} />
                 })}
 
                 <Card variant="plain" sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
@@ -221,6 +289,7 @@ export default HeaderBar;
     };
 
     export default Lists;
+
     ```
 * ProgressBar.js
     * The code for ProgressBar.js:  
@@ -281,16 +350,15 @@ export default HeaderBar;
     * The code for Task.js:  
     ```javascript
     import React, { useState } from 'react';
-    import { Box, Typography, IconButton } from '@mui/material';
+    import { Box, Typography } from '@mui/material';
     import { SmallMenu, VerticalDots } from './';
 
-    const Task = ({ task }) => {
+    const Task = ({ task, onTaskClick }) => {
         const [anchorEl, setAnchorEl] = useState(null);
-        const { id, title, completed } = task;
+        const { taskId, taskName, dueDate, completed, description } = task;
 
         const backgroundColor = () => {
-            if (id % 2 === 0) {
-                console.log('Even', id % 2)
+            if (taskId % 2 === 0) {
                 return 'cardBackgroundColor.main';
             } else {
                 return 'cardBackgroundColor.alternate';
@@ -319,6 +387,7 @@ export default HeaderBar;
                     borderRadius='12px'
                     border='2px solid'
                     borderColor='cardBackgroundColor.alternate'
+                    onClick = {() => onTaskClick(task)}
                 >
                     <Typography
                         variant="h6"
@@ -326,10 +395,10 @@ export default HeaderBar;
                             textDecoration: completed ? "line-through" : "none",
                             color: completed ? "textColor.completed" : "textColor.primary",
                         }}
-                    >{title}
+                    >{taskName}
                     </Typography>
 
-                    <VerticalDots id={id} onClick={handleClick} />
+                    <VerticalDots id={taskId} onClick={handleClick} />
 
                 </Box>
                 <SmallMenu anchorEl={anchorEl} handleClose={handleClose} />
@@ -339,6 +408,7 @@ export default HeaderBar;
     }
 
     export default Task;
+
     ```
 * TaskDetails.js
     * The code for TaskDetails.js: 
@@ -354,24 +424,39 @@ export default HeaderBar;
         Card,
         Divider
     } from '@mui/material';
-    import EditNoteIcon from '@mui/icons-material/EditNote';
-    import CheckIcon from '@mui/icons-material/Check';
-    import ClearIcon from '@mui/icons-material/Clear';
-    import DeleteIcon from '@mui/icons-material/Delete';
-
-    import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+    import { Check, Clear, Delete, EditNote } from '@mui/icons-material';
+    import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+    import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
     import { format } from 'date-fns';
 
     const TaskDetails = ({ task, onEdit, onDelete, onConfirm }) => {
         const [editMode, setEditMode] = useState(false);
-        const [title, setTitle] = useState(task.title);
-        const [dueDate, setDueDate] = useState(task.dueDate);
-        const [details, setDetails] = useState(task.details);
-        console.log('task.created: ', task.created)
-        const createdOn = format(new Date(task.created), 'MM/dd/yyyy');
-        const dueOn = format(new Date(task.dueDate), 'MM/dd/yyyy');
-        console.log('createdOn: ', createdOn);
-        const currentDate = format(new Date(), 'MM/dd/yyyy');
+        const [taskName, setTaskName] = useState(task ? task.taskName : "");
+        const [dueDateV, setDueDateV] = useState(task? new Date(task.dueDate) : "");
+        const [description, setDescription] = useState(task ? task.description : "");
+
+        if (!task) {
+            return (
+                <Box
+                    width="680px"
+                    height="1060px"
+                    bgcolor="cardBackgroundColor.main"
+                    p={2}
+                    display="flex"
+                    flexDirection="column"
+                    borderRadius='22px'
+                    justifyContent="center"
+                    alignItems="center"
+                >
+                    <Typography variant="h5">
+                        Please select a task to see the details.
+                    </Typography>
+                </Box>
+            );
+        }
+        const createdDate = task.createdDate ? format(new Date(task.createdDate), 'MM/dd/yyyy') : "";
+        const dueDate = task.dueDate ? format(new Date(task.dueDate), 'MM/dd/yyyy') : "";
+        const currentDate = task ? format(new Date(), 'MM/dd/yyyy') : "";
 
         const handleEdit = () => {
             setEditMode(true);
@@ -379,26 +464,25 @@ export default HeaderBar;
 
         const handleCancel = () => {
             setEditMode(false);
-            setTitle(task.title);
-            setDueDate(task.dueDate);
-            setDetails(task.details);
+            setTaskName(task.taskName);
+            setDueDateV(task.dueDate);
+            setDescription(task.description);
         };
 
         const handleConfirm = () => {
             const updatedTask = {
                 ...task,
-                title,
+                taskName,
                 dueDate,
-                details,
+                description,
             };
             onConfirm(updatedTask);
             setEditMode(false);
         };
 
         const handleDelete = () => {
-            onDelete(task.id);
+            onDelete(task.taskId);
         };
-
         return (
             <Box
                 width="680px"
@@ -410,37 +494,37 @@ export default HeaderBar;
                 borderRadius='22px'
             >
                 {!editMode ? (
-                    <>  
+                    <>
                         <Box display="flex" justifyContent="space-between" padding={5} boxSizing='border-box'>
-                        <Typography variant="h6" mb={1}>
-                            Created: {createdOn}
-                        </Typography>
-                        {task.dueDate && (
                             <Typography variant="h6" mb={1}>
-                                Due: {dueOn}
+                                Created: {createdDate}
                             </Typography>
-                        )}
+                            {dueDateV && (
+                                <Typography variant="h6" mb={1}>
+                                    Due: {dueDateV}
+                                </Typography>
+                            )}
                         </Box>
                         <Divider variant="middle" />
                         <Typography variant="h2" mb={2} mt={4} textAlign='center'>
-                            {task.title}
+                            {task.taskId}
                         </Typography>
-                        <Typography variant="h5" 
-                        sx={{ ml:'40px' }}
+                        <Typography variant="h5"
+                            sx={{ ml: '40px' }}
                         >Information</Typography>
                         <TextareaAutosize
-                            rowsMin={15}
-                            value={task.details}
+                            minRows={15}
+                            value={task.description}
                             disabled
                             style={{ width: '600px', height: '685px', borderRadius: '12px', borderColor: 'backgroundColor.default', resize: 'none', margin: 'auto', padding:    '12px' }}
                         />
                         <Card variant='plain' sx={{ mt: 'auto', ml: 'auto', backgroundColor: 'cardBackgroundColor.main' }}>
-                        <IconButton onClick={handleEdit}>
-                            <EditNoteIcon 
-                            sx={{ color: 'buttonColor.main', width:45, height:45 }}
+                            <IconButton onClick={handleEdit}>
+                                <EditNote
+                                    sx={{ color: 'buttonColor.main', width: 45, height: 45 }}
 
-                             />
-                        </IconButton>
+                                />
+                            </IconButton>
                         </Card>
                     </>
                 ) : (
@@ -448,43 +532,47 @@ export default HeaderBar;
                         <Typography variant="subtitle1" mb={1}>
                             Created: {currentDate}
                         </Typography>
-                        <hr />
-                        <TextareaAutosize rowsMin={10} />
+                        <Divider variant="middle" />
                         <TextField
                             label="Task Title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
+                            value={taskName}
+                            onChange={(e) => setTaskName(e.target.value)}
                             fullWidth
                             margin="normal"
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">
                                         <IconButton onClick={handleCancel} size="small">
-                                            <ClearIcon />
+                                            <Clear />
                                         </IconButton>
                                     </InputAdornment>
                                 ),
                             }}
                         />
-                        <DateCalendar
-                            label="Due Date"
-                            onChange={(newValue) => setDueDate(newValue)}
-                            renderInput={(params) => <TextField {...params} />}
-                            fullWidth
-                            margin="normal"
-                        />
+                        {task &&
+                            <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                <DatePicker
+                                    label="Due Date"
+                                    value={dueDate}
+                                    onChange={(newValue) => setDueDateV(newValue)}
+                                    renderInput={(params) => <TextField {...params} />}
+                                    fullWidth
+                                    margin="normal"
+                                />
+                            </LocalizationProvider>
+                        }
                         <TextareaAutosize
-                            rowsMin={15}
-                            value={details}
-                            onChange={(e) => setDetails(e.target.value)}
-                            style={{ width: '600px' }}
+                            minRows={15}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            style={{ width: '600px', height: '685px', borderRadius: '12px', borderColor: 'backgroundColor.default', resize: 'none', margin: 'auto', padding:    '12px' }}
                         />
                         <Box display="flex" justifyContent="space-between" mt={2}>
                             <IconButton onClick={handleConfirm} size="small">
-                                <CheckIcon />
+                                <Check />
                             </IconButton>
                             <IconButton onClick={handleDelete} size="small">
-                                <DeleteIcon />
+                                <Delete />
                             </IconButton>
                         </Box>
                     </>
@@ -498,20 +586,22 @@ export default HeaderBar;
 * TaskList.js
     * The code for TaskList.js:  
     ```javascript
-    import React from 'react';
-    import { Box, Typography, IconButton } from '@mui/material';
+    import React, { useState } from 'react';
+    import { Box, Typography } from '@mui/material';
     import { ProgressBar, SmallMenu, VerticalDots } from './';
 
-    const TaskList = ({ taskList }) => {
-        const [anchorEl, setAnchorEl] = React.useState(null);
+    const TaskList = ({ taskList, onTaskListClick }) => {
+        const [anchorEl, setAnchorEl] = useState(null);
         console.log('TaskList: ', taskList)
-        const { id, title, tasksCompleted, totalTasks } = taskList;
+        const { listId, listName, tasks } = taskList;
+         // Calculate totalTasks and tasksCompleted based on tasks array
+        const totalTasks = tasks.length;
+        const tasksCompleted = tasks.filter(task => task.completed).length;
         const progress = (tasksCompleted / totalTasks) * 100;
+        console.log('listId: ', listId)
 
-        // Create a function that will set the background color of the Box dependent on wheter the 'id' is even or odd
         const backgroundColor = () => {
-            if (id % 2 === 0) {
-                console.log('Even', id % 2)
+            if (listId % 2 === 0) {
                 return 'cardBackgroundColor.main';
             } else {
                 return 'cardBackgroundColor.alternate';
@@ -530,26 +620,27 @@ export default HeaderBar;
                 <Box
                     boxSizing='border-box'
                     border='2px solid'
-                    padding='10px'
+                    padding='20px'
                     borderColor='cardBackgroundColor.alternate'
                     backgroundColor={backgroundColor()}
-                    height='115px'
-                    width='380px'
+                    height='auto'
+                    width='100%'
                     borderRadius='12px'
                     display='flex'
                     alignItems='center'
-
+                    onClick={() => onTaskListClick(taskList)}
                 >
                     <Box
                         display='flex'
                     flexDirection='column'
                     flexGrow={1}
+                    // gap={1}
                     >
-                    <Typography variant="h6">{title}</Typography>
+                    <Typography variant="h5" gutterBottom>{listName}</Typography>
                     <Typography variant="body2">{`${tasksCompleted} of ${totalTasks} Tasks Complete`}</Typography>
                     <ProgressBar margin='10px 0 0 0' width='80%' progress={progress} />
                 </Box>
-                <VerticalDots id={id} onClick={handleClick} 
+                <VerticalDots listId={listId} onClick={handleClick} 
                 sx={{ ml: 'auto' }} />
 
             </Box>
@@ -569,15 +660,30 @@ export default HeaderBar;
     import { Box, Typography, Card, CardContent } from '@mui/material';
     import { Task, AddButton } from './';
 
-    const Tasks = ({ taskList }) => {
-        const tasks = [
-            { id: 1, title: 'Task 1', completed: false },
-            { id: 2, title: 'Task 2', completed: true },
-            { id: 3, title: 'Task 3', completed: false },
-        ];
-        const tasksCompleted = tasks.filter((task) => task.completed);
+    const Tasks = ({ taskList, onTaskClick }) => {
+        if (!taskList) {
+            return (
+                <Box
+                    width="680px"
+                    height="100%"
+                    bgcolor="cardBackgroundColor.main"
+                    p={2}
+                    // ml={2}
+                    display="flex"
+                    flexDirection="column"
+                    alignItems="center"
+                    borderRadius='22px'
+                >
+                    <Typography variant="h5" mb={2}>
+                        Please select a task list.
+                    </Typography>
+                </Box>
+            );
+        }
+    
+        const tasksCompleted = taskList.tasks.filter((task) => task.completed);
         console.log('tasks completed: ', tasksCompleted)
-        const tasksOutstanding = tasks.filter((task) => !task.completed);
+        const tasksOutstanding = taskList.tasks.filter((task) => !task.completed);
         console.log('tasks outstanding: ', tasksOutstanding)
 
         const handleAddTask = () => {
@@ -588,22 +694,23 @@ export default HeaderBar;
         return (
             <Box
                 width="680px"
-                height="1060px"
+                height="100%"
                 bgcolor="cardBackgroundColor.main"
                 p={2}
+                // ml={2}
                 display="flex"
                 flexDirection="column"
                 alignItems="center"
                 borderRadius='22px'
             >
                 <Typography variant="h5" mb={2}>
-                    {taskList.title} Tasks
+                    {taskList.listName} Tasks
                 </Typography>
                 <Typography variant="h6" mb={2}>
                 Outstanding ({tasksOutstanding.length}): 
                 </Typography>
-                {tasks.map((task) => (
-                    <Task key={task.id} task={task} />
+                {taskList.tasks.map((task) => (
+                    <Task key={task.taskId} task={task} onTaskClick={onTaskClick} />
                 ))}
 
                 <Card variant="plain" sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
@@ -616,38 +723,6 @@ export default HeaderBar;
     };
 
     export default Tasks;
-    ```
-* TestComponent.js (for testing components as we make them).
-    * The code for TestComponent.js:  
-    ```javascript
-    import React from 'react'
-    import { Box } from '@mui/material'
-    import { format } from 'date-fns';
-    import { AddButton, ProgressBar, HeaderBar, TaskList, Task, Lists, Tasks, TaskDetails } from './'
-    const TestComponent = () => {
-        const taskList1 = { id: 1, title: 'Errands', tasksCompleted: 3, totalTasks: 12 }
-        const taskList2 = { id: 2, title: 'Yardwork', tasksCompleted: 7, totalTasks: 10 }
-        const task1 = { id: 1, title: 'Go by bank', completed: false, dueDate: format(new Date('2023-06-26'), 'MM/dd/yyyy').toString(), details: 'Need to run by the bank   and make a deposit. Also need to ask about opening a new business savings account.', created: format(new Date('2023-05-23'), 'MM/dd/yyyy').toString()}
-        const task2 = { id: 2, title: 'Pay electric bill', completed: true }
-
-        const progress = (taskList1.tasksCompleted / taskList1.totalTasks) * 100
-        return (
-            <Box bgcolor='backgroundColor.default'>
-                <AddButton />
-                <ProgressBar progress={progress} />
-                <HeaderBar currentTaskListTitle='Errands' tasksCompleted='7' totalTasks='9'/>
-                <TaskList key={taskList1.id} taskList={taskList1} />
-                <TaskList key={taskList2.id} taskList={taskList2} />
-                <Task task={task1} />
-                <Task task={task2} />
-                <Lists />
-                <Tasks taskList = {taskList1}/>
-                <TaskDetails task={task1}/>
-            </Box>
-        )
-    }
-
-    export default TestComponent
 
     ```
 * VerticalDots.js 
@@ -678,6 +753,24 @@ export default HeaderBar;
     }
 
     export default VerticalDots
+
+    ```
+* WalletConnect.js
+    * The code for WalletConnect.js:
+    ```javascript
+    import React from 'react'
+    import { ConnectWallet } from "@thirdweb-dev/react";
+    import { Box } from '@mui/material'
+
+    const WalletConnect = () => {
+      return (
+        <Box display="flex" alignItems="center" p={2} width='285px' height='50px' padding="0px 30px" borderRadius='25px'  bgcolor='cardBackgroundColor.main'>
+            <ConnectWallet />
+        </Box>
+      )
+    }
+
+    export default WalletConnect
 
     ```
 In the 'theme' folder we have:
@@ -713,5 +806,5 @@ In the 'theme' folder we have:
     ```
 
 
-Please review everything I have typed here a few times.  Ask me any questions about anything that is not clear. Don't just assume you can figure out what I meant if I wasnt clear, please ask me.  After that, let me know if you are ready to move forward.
+Please review everything I have typed here a few times.  Ask me any questions about anything that is not clear. Don't just assume you can figure out what I meant if I wasn't clear, please ask me.  After that, let me know if you are ready to move forward.
 
