@@ -58,14 +58,17 @@ We have a components folder which holds the following:
     export { default as TestComponent } from './TestComponent';
     export { default as ProgressBar } from './ProgressBar';
     export { default as HeaderBar } from './HeaderBar';
-    export { default as TaskList } from './TaskList';
-    export { default as Task } from './Task';
+    export { default as TaskList } from './Task/TaskList';
+    export { default as Task } from './Task/Task';
     export { default as SmallMenu } from './SmallMenu';
     export { default as Lists } from './Lists';
-    export { default as Tasks } from './Tasks';
-    export { default as TaskDetails } from './TaskDetails';
+    export { default as Tasks } from './Task/Tasks';
+    export { default as TaskDetails } from './Task/TaskDetails';
     export { default as VerticalDots } from './VerticalDots';
     export { default as WalletConnect } from './WalletConnect';
+    export { default as CardContainer } from './CardContainer';
+    export { default as TaskEdit } from './Task/TaskEdit';  
+    export { default as TaskView } from './Task/TaskView';
     ```
 * Lists.js
     * The code for Lists.js:  
@@ -93,6 +96,7 @@ We have a components folder which holds the following:
                 display="flex"
                 flexDirection="column"
                 borderRadius="22px"
+                boxSizing="border-box"
             >
                 <Typography variant="h5" mb={2}>
                     Lists ({taskListsLength})
@@ -173,14 +177,15 @@ We have a components folder which holds the following:
 * Task.js
     * The code for Task.js:  
     ```javascript
-    import React, { useState } from 'react';
+    import React, { useState, useContext} from 'react';
     import { Box, Typography } from '@mui/material';
-    import { SmallMenu, VerticalDots } from './';
+    import { TodoContext } from '../../context/TodoContext';
+    import { SmallMenu, VerticalDots } from '../';
 
-    const Task = ({ task, onTaskClick }) => {
+    const Task = ({ task }) => {
         const [anchorEl, setAnchorEl] = useState(null);
         const { taskId, taskName, dueDate, completed, description } = task;
-
+        const { selectedTask, setSelectedTask } = useContext(TodoContext);
         const backgroundColor = () => {
             if (taskId % 2 === 0) {
                 return 'cardBackgroundColor.main';
@@ -197,6 +202,10 @@ We have a components folder which holds the following:
             setAnchorEl(null);
         };
 
+        const handleTaskClick = (task) => {
+            setSelectedTask(task);
+          };
+
         return (
             <div>
                 <Box
@@ -211,7 +220,7 @@ We have a components folder which holds the following:
                     borderRadius='12px'
                     border='2px solid'
                     borderColor='cardBackgroundColor.alternate'
-                    onClick = {() => onTaskClick(task)}
+                    onClick = {() => handleTaskClick(task)}
                 >
                     <Typography
                         variant="h6"
@@ -237,7 +246,7 @@ We have a components folder which holds the following:
 * TaskDetails.js
     * The code for TaskDetails.js: 
     ```javascript
-    import React, { useState } from 'react';
+    import React, { useState, useContext, useEffect } from 'react';
     import {
         Box,
         Typography,
@@ -252,35 +261,41 @@ We have a components folder which holds the following:
     import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
     import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
     import { format } from 'date-fns';
+    import { utcToZonedTime } from 'date-fns-tz';
+    import { TodoContext } from '../../context/TodoContext';
+    import { CardContainer, TaskEdit, TaskView } from '../';
 
-    const TaskDetails = ({ task, onEdit, onDelete, onConfirm }) => {
+
+    const TaskDetails = ({ onEdit, onDelete, onConfirm }) => {
+        const { selectedTask } = useContext(TodoContext);
+        console.log('selectedTask: ', selectedTask)
+        console.log('selectedTask.dueDate: ', selectedTask ? selectedTask.dueDate : '')
+
         const [editMode, setEditMode] = useState(false);
-        const [taskName, setTaskName] = useState(task ? task.taskName : "");
-        const [dueDateV, setDueDateV] = useState(task? new Date(task.dueDate) : "");
-        const [description, setDescription] = useState(task ? task.description : "");
+        const [taskName, setTaskName] = useState("");
+        const [dueDate, setDueDate] = useState(null);
+        const [description, setDescription] = useState("");
 
-        if (!task) {
+        useEffect(() => {
+            setTaskName(selectedTask ? selectedTask.taskName : "");
+            setDescription(selectedTask ? selectedTask.description : "");
+            setDueDate(selectedTask ? format(utcToZonedTime(new Date(selectedTask.dueDate), 'UTC'), 'MM/dd/yyyy') : null);
+            console.log('dueDate: ', dueDate)
+            console.log('selectedTask.dueDate: ', selectedTask ? selectedTask.dueDate : null)
+        }, [selectedTask]);
+
+
+        if (!selectedTask) {
             return (
-                <Box
-                    width="680px"
-                    height="1060px"
-                    bgcolor="cardBackgroundColor.main"
-                    p={2}
-                    display="flex"
-                    flexDirection="column"
-                    borderRadius='22px'
-                    justifyContent="center"
-                    alignItems="center"
-                >
+                <CardContainer>
                     <Typography variant="h5">
                         Please select a task to see the details.
                     </Typography>
-                </Box>
+                </CardContainer>
             );
         }
-        const createdDate = task.createdDate ? format(new Date(task.createdDate), 'MM/dd/yyyy') : "";
-        const dueDate = task.dueDate ? format(new Date(task.dueDate), 'MM/dd/yyyy') : "";
-        const currentDate = task ? format(new Date(), 'MM/dd/yyyy') : "";
+        const createdDate = selectedTask.createdDate ? format(utcToZonedTime(new Date(selectedTask.createdDate), 'UTC'), 'MM/dd/yyyy') : "";
+        const currentDate = format(new Date(), 'MM/dd/yyyy');
 
         const handleEdit = () => {
             setEditMode(true);
@@ -288,14 +303,14 @@ We have a components folder which holds the following:
 
         const handleCancel = () => {
             setEditMode(false);
-            setTaskName(task.taskName);
-            setDueDateV(task.dueDate);
-            setDescription(task.description);
+            setTaskName(selectedTask.taskName);
+            setDueDate(format(utcToZonedTime(new Date(selectedTask.dueDate), 'UTC'), 'MM/dd/yyyy'));
+            setDescription(selectedTask.description);
         };
 
         const handleConfirm = () => {
             const updatedTask = {
-                ...task,
+                ...selectedTask,
                 taskName,
                 dueDate,
                 description,
@@ -305,114 +320,135 @@ We have a components folder which holds the following:
         };
 
         const handleDelete = () => {
-            onDelete(task.taskId);
+            onDelete(selectedTask.taskId);
         };
+
         return (
-            <Box
-                width="680px"
-                height="1060px"
-                bgcolor="cardBackgroundColor.main"
-                p={2}
-                display="flex"
-                flexDirection="column"
-                borderRadius='22px'
-            >
+            <CardContainer>
                 {!editMode ? (
                     <>
-                        <Box display="flex" justifyContent="space-between" padding={5} boxSizing='border-box'>
-                            <Typography variant="h6" mb={1}>
-                                Created: {createdDate}
-                            </Typography>
-                            {dueDateV && (
-                                <Typography variant="h6" mb={1}>
-                                    Due: {dueDateV}
-                                </Typography>
-                            )}
-                        </Box>
-                        <Divider variant="middle" />
-                        <Typography variant="h2" mb={2} mt={4} textAlign='center'>
-                            {task.taskId}
-                        </Typography>
-                        <Typography variant="h5"
-                            sx={{ ml: '40px' }}
-                        >Information</Typography>
-                        <TextareaAutosize
-                            minRows={15}
-                            value={task.description}
-                            disabled
-                            style={{ width: '600px', height: '685px', borderRadius: '12px', borderColor: 'backgroundColor.default', resize: 'none', margin: 'auto', padding:    '12px' }}
+                        <TaskView
+                            createdDate={format(utcToZonedTime(new Date(selectedTask.createdDate), 'UTC'), 'MM/dd/yyyy')}
+                            dueDate={dueDate}
+                            taskName={taskName}
+                            description={description}
+                            handleEdit={handleEdit}
                         />
-                        <Card variant='plain' sx={{ mt: 'auto', ml: 'auto', backgroundColor: 'cardBackgroundColor.main' }}>
-                            <IconButton onClick={handleEdit}>
-                                <EditNote
-                                    sx={{ color: 'buttonColor.main', width: 45, height: 45 }}
-
-                                />
-                            </IconButton>
-                        </Card>
                     </>
                 ) : (
                     <>
-                        <Typography variant="subtitle1" mb={1}>
-                            Created: {currentDate}
-                        </Typography>
-                        <Divider variant="middle" />
-                        <TextField
-                            label="Task Title"
-                            value={taskName}
-                            onChange={(e) => setTaskName(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton onClick={handleCancel} size="small">
-                                            <Clear />
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
+                        <TaskEdit
+                            selectedTask={selectedTask}
+                            taskName={taskName}
+                            setTaskName={setTaskName}
+                            dueDate={dueDate}
+                            setDueDate={setDueDate}
+                            description={description}
+                            setDescription={setDescription}
+                            handleConfirm={handleConfirm}
+                            handleCancel={handleCancel}
                         />
-                        {task &&
-                            <LocalizationProvider dateAdapter={AdapterDateFns}>
-                                <DatePicker
-                                    label="Due Date"
-                                    value={dueDate}
-                                    onChange={(newValue) => setDueDateV(newValue)}
-                                    renderInput={(params) => <TextField {...params} />}
-                                    fullWidth
-                                    margin="normal"
-                                />
-                            </LocalizationProvider>
-                        }
-                        <TextareaAutosize
-                            minRows={15}
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            style={{ width: '600px', height: '685px', borderRadius: '12px', borderColor: 'backgroundColor.default', resize: 'none', margin: 'auto', padding:    '12px' }}
-                        />
-                        <Box display="flex" justifyContent="space-between" mt={2}>
-                            <IconButton onClick={handleConfirm} size="small">
-                                <Check />
-                            </IconButton>
-                            <IconButton onClick={handleDelete} size="small">
-                                <Delete />
-                            </IconButton>
-                        </Box>
                     </>
                 )}
-            </Box>
+            </CardContainer>
         );
+
     };
 
     export default TaskDetails;
+    ```
+* TaskEdit.js
+    * The code for TaskEdit.js:
+    ```javascript
+    import React from 'react';
+    import { TextField, TextareaAutosize, IconButton, InputAdornment, Typography, Divider, Box } from '@mui/material';
+    import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+    import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+    import { Check, Clear, CloseOutlined } from '@mui/icons-material';
+
+    const TaskEdit = ({
+        taskName,
+        setTaskName,
+        dueDate,
+        setDueDate,
+        description,
+        setDescription,
+        handleConfirm,
+        handleCancel,
+        selectedTask,
+    }) => {
+        return (
+            <>
+                <Typography variant="subtitle1" mb={1}>
+                    Created: {selectedTask.createdDate}
+                </Typography>
+                <Divider variant="middle" />
+                <TextField
+                    label="Task Title"
+                    value={taskName}
+                    onChange={(e) => setTaskName(e.target.value)}
+                    fullWidth
+                    margin="normal"
+                    InputProps={{
+                        endAdornment: (
+                            <InputAdornment position="end">
+                                <IconButton onClick={handleCancel} size="small">
+                                    <Clear />
+                                </IconButton>
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+                {selectedTask && (
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DatePicker
+                            label="Due Date"
+                            value={new Date(dueDate)}
+                            onChange={(newValue) => setDueDate(newValue)}
+                            renderInput={(params) => <TextField {...params} fullWidth margin="normal" />}
+                        />
+                    </LocalizationProvider>
+                )}
+                <TextareaAutosize
+                    minRows={15}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    style={{
+                        width: '600px',
+                        height: '685px',
+                        borderRadius: '12px',
+                        borderColor: 'backgroundColor.default',
+                        resize: 'none',
+                        margin: 'auto',
+                        padding: '12px',
+                    }}
+                />
+                <Box display="flex" justifyContent="space-between" mt={2}>
+                    <IconButton onClick={handleConfirm} size="small">
+                        <Check
+                            sx={{ color: 'buttonColor.main' }}
+                            fontSize='large'
+                        />
+                    </IconButton>
+                    <IconButton onClick={handleCancel} size="small">
+                        <CloseOutlined
+                            sx={{ color: 'buttonColor.main' }}
+                            fontSize='large'
+                        />
+                    </IconButton>
+                </Box>
+            </>
+        );
+    };
+
+    export default TaskEdit;
     ```
 * TaskList.js
     * The code for TaskList.js:  
     ```javascript
     import React, { useState } from 'react';
     import { Box, Typography } from '@mui/material';
-    import { ProgressBar, SmallMenu, VerticalDots } from './';
+    import { ProgressBar, SmallMenu, VerticalDots } from '../';
 
     const TaskList = ({ taskList, onTaskListClick }) => {
         const [anchorEl, setAnchorEl] = useState(null);
@@ -464,7 +500,7 @@ We have a components folder which holds the following:
                     <Typography variant="body2">{`${tasksCompleted} of ${totalTasks} Tasks Complete`}</Typography>
                     <ProgressBar margin='10px 0 0 0' width='80%' progress={progress} />
                 </Box>
-                <VerticalDots listId={listId} onClick={handleClick} 
+                <VerticalDots id={listId} onClick={handleClick} 
                 sx={{ ml: 'auto' }} />
 
             </Box>
@@ -481,30 +517,20 @@ We have a components folder which holds the following:
     * The code for Tasks.js:  
     ```javascript
     import React from 'react';
-    import { Box, Typography, Card, CardContent } from '@mui/material';
-    import { Task, AddButton } from './';
+    import { Typography, Card, CardContent } from '@mui/material';
+    import { Task, AddButton, CardContainer } from '../';
 
-    const Tasks = ({ taskList, onTaskClick }) => {
+    const Tasks = ({ taskList }) => {
         if (!taskList) {
             return (
-                <Box
-                    width="680px"
-                    height="100%"
-                    bgcolor="cardBackgroundColor.main"
-                    p={2}
-                    // ml={2}
-                    display="flex"
-                    flexDirection="column"
-                    alignItems="center"
-                    borderRadius='22px'
-                >
+                <CardContainer>
                     <Typography variant="h5" mb={2}>
                         Please select a task list.
                     </Typography>
-                </Box>
+                </CardContainer>
             );
         }
-    
+
         const tasksCompleted = taskList.tasks.filter((task) => task.completed);
         console.log('tasks completed: ', tasksCompleted)
         const tasksOutstanding = taskList.tasks.filter((task) => !task.completed);
@@ -516,25 +542,15 @@ We have a components folder which holds the following:
         };
 
         return (
-            <Box
-                width="680px"
-                height="100%"
-                bgcolor="cardBackgroundColor.main"
-                p={2}
-                // ml={2}
-                display="flex"
-                flexDirection="column"
-                alignItems="center"
-                borderRadius='22px'
-            >
+            <CardContainer>
                 <Typography variant="h5" mb={2}>
                     {taskList.listName} Tasks
                 </Typography>
                 <Typography variant="h6" mb={2}>
-                Outstanding ({tasksOutstanding.length}): 
+                    Outstanding ({tasksOutstanding.length}):
                 </Typography>
                 {taskList.tasks.map((task) => (
-                    <Task key={task.taskId} task={task} onTaskClick={onTaskClick} />
+                    <Task key={task.taskId} task={task} />
                 ))}
 
                 <Card variant="plain" sx={{ backgroundColor: 'cardBackgroundColor.main', mt: 'auto', ml: 'auto' }}>
@@ -542,12 +558,64 @@ We have a components folder which holds the following:
                         <AddButton onClick={handleAddTask} />
                     </CardContent>
                 </Card>
-            </Box>
+            </CardContainer>
         );
     };
 
     export default Tasks;
-
+    ```
+* TaskView.js
+    * The code for TaskView.js:
+    ```javascript
+    import React from 'react';
+    import { Typography, Card, IconButton, Divider, TextareaAutosize, Box } from '@mui/material';
+    import { EditNote } from '@mui/icons-material';
+    
+    const TaskView = ({ createdDate, dueDate, taskName, description, handleEdit }) => {
+      return (
+        <>
+          <Box display="flex" justifyContent="space-between" padding={5} boxSizing='border-box' width='100%'>
+          <Typography variant="h6" mb={1}>
+            Created: {createdDate}
+          </Typography>
+          {dueDate && (
+                                <Typography variant="h6" mb={1}>
+                                    Due: {dueDate}
+                                </Typography>
+                            )}
+          </Box>
+          <Divider variant="middle" width='80%' />
+          <Typography variant="h2" mb={2} mt={4} textAlign='center'>
+            {taskName}
+          </Typography>
+          <Typography variant="h5" sx={{ ml: '40px' }}>Information</Typography>
+          <TextareaAutosize
+            minRows={15}
+            value={description}
+            disabled
+            style={{
+              width: '600px',
+              height: '685px',
+              borderRadius: '12px',
+              borderColor: 'backgroundColor.default',
+              resize: 'none',
+              margin: 'auto',
+              padding: '12px',
+            }}
+          />
+          <Card
+            variant="plain"
+            sx={{ mt: 'auto', ml: 'auto', backgroundColor: 'cardBackgroundColor.main' }}
+          >
+            <IconButton onClick={handleEdit}>
+              <EditNote sx={{ color: 'buttonColor.main', width: 45, height: 45 }} />
+            </IconButton>
+          </Card>
+        </>
+      );
+    };
+    
+    export default TaskView;
     ```
 * VerticalDots.js 
     * The code for VerticalDots.js:
@@ -596,6 +664,31 @@ We have a components folder which holds the following:
 
     export default WalletConnect
 
+    ```
+In the 'context' folder we have:
+
+* TodoContext.js
+    * The code for TodoContext.js:
+    ```javascript
+    import React, { createContext, useState } from 'react';
+
+    export const TodoContext = createContext();
+
+    export const TodoProvider = ({ children }) => {
+        // Set up state variables
+        const [selectedTaskList, setSelectedTaskList] = useState(null);
+        const [selectedTask, setSelectedTask] = useState(null);
+
+        return (
+            <TodoContext.Provider value={{ 
+                // Provide state variables and setter functions
+                selectedTaskList, setSelectedTaskList, 
+                selectedTask, setSelectedTask 
+            }}>
+                {children}
+            </TodoContext.Provider>
+        );
+    };
     ```
 In the 'theme' folder we have:
 
