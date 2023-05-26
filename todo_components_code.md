@@ -181,7 +181,7 @@ We have a components folder which holds the following:
     import { Box, Typography } from '@mui/material';
     import { TodoContext } from '../../context/TodoContext';
     import { SmallMenu, VerticalDots } from '../';
-
+    
     const Task = ({ task }) => {
         const [anchorEl, setAnchorEl] = useState(null);
         const { taskId, taskName, dueDate, completed, description } = task;
@@ -193,19 +193,19 @@ We have a components folder which holds the following:
                 return 'cardBackgroundColor.alternate';
             }
         };
-
+    
         const handleClick = (event) => {
             setAnchorEl(event.currentTarget);
         };
-
+    
         const handleClose = () => {
             setAnchorEl(null);
         };
-
+    
         const handleTaskClick = (task) => {
             setSelectedTask(task);
           };
-
+    
         return (
             <div>
                 <Box
@@ -230,16 +230,16 @@ We have a components folder which holds the following:
                         }}
                     >{taskName}
                     </Typography>
-
+    
                     <VerticalDots id={taskId} onClick={handleClick} />
-
+    
                 </Box>
                 <SmallMenu anchorEl={anchorEl} handleClose={handleClose} />
-
+    
             </div>
         );
     }
-
+    
     export default Task;
 
     ```
@@ -247,19 +247,7 @@ We have a components folder which holds the following:
     * The code for TaskDetails.js: 
     ```javascript
     import React, { useState, useContext, useEffect } from 'react';
-    import {
-        Box,
-        Typography,
-        IconButton,
-        TextField,
-        TextareaAutosize,
-        InputAdornment,
-        Card,
-        Divider
-    } from '@mui/material';
-    import { Check, Clear, Delete, EditNote } from '@mui/icons-material';
-    import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-    import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
+    import { Typography } from '@mui/material';
     import { format } from 'date-fns';
     import { utcToZonedTime } from 'date-fns-tz';
     import { TodoContext } from '../../context/TodoContext';
@@ -277,11 +265,13 @@ We have a components folder which holds the following:
         const [description, setDescription] = useState("");
 
         useEffect(() => {
+            if(selectedTask) {
             setTaskName(selectedTask ? selectedTask.taskName : "");
             setDescription(selectedTask ? selectedTask.description : "");
             setDueDate(selectedTask ? format(utcToZonedTime(new Date(selectedTask.dueDate), 'UTC'), 'MM/dd/yyyy') : null);
             console.log('dueDate: ', dueDate)
             console.log('selectedTask.dueDate: ', selectedTask ? selectedTask.dueDate : null)
+            }
         }, [selectedTask]);
 
 
@@ -294,8 +284,7 @@ We have a components folder which holds the following:
                 </CardContainer>
             );
         }
-        const createdDate = selectedTask.createdDate ? format(utcToZonedTime(new Date(selectedTask.createdDate), 'UTC'), 'MM/dd/yyyy') : "";
-        const currentDate = format(new Date(), 'MM/dd/yyyy');
+    
 
         const handleEdit = () => {
             setEditMode(true);
@@ -310,12 +299,12 @@ We have a components folder which holds the following:
 
         const handleConfirm = () => {
             const updatedTask = {
-                ...selectedTask,
-                taskName,
-                dueDate,
-                description,
+            ...selectedTask,
+            taskName,
+            dueDate,
+            description,
             };
-            onConfirm(updatedTask);
+            onConfirm(updatedTask); // Use the provided onConfirm prop
             setEditMode(false);
         };
 
@@ -355,7 +344,7 @@ We have a components folder which holds the following:
 
     };
 
-    export default TaskDetails;
+export default TaskDetails;
     ```
 * TaskEdit.js
     * The code for TaskEdit.js:
@@ -549,7 +538,7 @@ We have a components folder which holds the following:
                 <Typography variant="h6" mb={2}>
                     Outstanding ({tasksOutstanding.length}):
                 </Typography>
-                {taskList.tasks.map((task) => (
+                {taskList && taskList.tasks.map((task) => (
                     <Task key={task.taskId} task={task} />
                 ))}
 
@@ -563,6 +552,7 @@ We have a components folder which holds the following:
     };
 
     export default Tasks;
+
     ```
 * TaskView.js
     * The code for TaskView.js:
@@ -570,7 +560,7 @@ We have a components folder which holds the following:
     import React from 'react';
     import { Typography, Card, IconButton, Divider, TextareaAutosize, Box } from '@mui/material';
     import { EditNote } from '@mui/icons-material';
-    
+
     const TaskView = ({ createdDate, dueDate, taskName, description, handleEdit }) => {
       return (
         <>
@@ -614,7 +604,7 @@ We have a components folder which holds the following:
         </>
       );
     };
-    
+
     export default TaskView;
     ```
 * VerticalDots.js 

@@ -112,10 +112,10 @@ import { Grid, Box, Stack } from '@mui/material';
 import { Lists, Tasks, HeaderBar, WalletConnect, TaskDetails } from './components';
 import { TodoProvider } from './context/TodoContext';
 import todoListData from './data/todoListData';
-import { boxSizing } from '@mui/system';
+
 
 function App() {
-  
+
   // Check if task list data exists in local storage
   const taskListsJSON = localStorage.getItem('taskLists');
   // If there's no data in Local Storage, store the initial data
@@ -136,9 +136,45 @@ function App() {
     setSelectedTaskList(taskList);
   };
 
-  // const handleTaskClick = (task) => {
-  //   setSelectedTask(task);
-  // };
+  const handleTaskUpdate = (updatedTask) => {
+    // Find the task list containing the current task
+    const taskListToUpdate = taskLists.find(
+      (taskList) => taskList.listId === selectedTaskList.listId
+    );
+  
+    // Check if taskListToUpdate exists
+    if (!taskListToUpdate) {
+      console.error('Task list not found for the selected task');
+      return;
+    }
+  
+    // Find the index of the task to be updated within its list
+    const taskIndex = taskListToUpdate.tasks.findIndex(
+      (task) => task.taskId === updatedTask.taskId
+    );
+  
+    if (taskIndex < 0) {
+      console.error('Task not found in the selected task list');
+      return;
+    } 
+    const updatedTaskList = {
+      ...taskListToUpdate,
+      tasks: [
+        ...taskListToUpdate.tasks.slice(0, taskIndex),
+        updatedTask,
+        ...taskListToUpdate.tasks.slice(taskIndex + 1),
+      ],
+    };
+    const updatedTaskLists = taskLists.map((taskList) =>
+    taskList.listId === selectedTaskList.listId ? updatedTaskList : taskList
+  );
+
+  // Update the state with the new taskLists array
+  setTaskLists(updatedTaskLists);
+
+  // Update the local storage with the new taskLists array
+  localStorage.setItem("taskLists", JSON.stringify(updatedTaskLists));
+};
 
   console.log('selectedTaskList: ', selectedTaskList)
 
@@ -163,7 +199,9 @@ function App() {
                   </Box>
                   <Box display='flex' gap='3vw' height='100%'>
                     <Tasks taskList={selectedTaskList} />
-                    <TaskDetails />
+                    <TaskDetails 
+                      onConfirm={handleTaskUpdate}
+                    />
                   </Box>
                 </Stack>
               </Grid>
@@ -176,6 +214,7 @@ function App() {
 }
 
 export default App;
+
 
 
 ```
